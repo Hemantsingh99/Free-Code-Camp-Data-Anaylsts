@@ -1,0 +1,92 @@
+/// Page View Time Series Visualizer project from freeCodeCamp ///
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+# 1. Import the data from "fcc-forum-pageviews.csv". Set the index to the date column.
+# Parse dates directly on import so Pandas treats them as timestamp objects.
+df = pd.read_csv('fcc-forum-pageviews.csv', parse_dates=['date'], index_col='date')
+
+# 2. Clean the data by filtering out days in the top 2.5% or bottom 2.5%
+df = df[
+    (df['value'] >= df['value'].quantile(0.025)) &
+    (df['value'] <= df['value'].quantile(0.975))
+]
+
+# 3. Create a draw_line_plot function that uses Matplotlib
+def draw_line_plot():
+    # Copy data frame for isolation
+    df_line = df.copy()
+    
+    # Set up matplotlib figure
+    fig, ax = plt.subplots(figsize=(15, 5))
+    
+    # Plot data
+    ax.plot(df_line.index, df_line['value'], color='red', linewidth=1)
+    
+    # Add title and axis labels
+    ax.set_title('Daily freeCodeCamp Forum Page Views 5/2016-12/2019')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Page Views')
+
+    # Save image and return fig (don't modify)
+    fig.savefig('line_plot.png')
+    return fig
+
+# 4. Create a draw_bar_plot function
+def draw_bar_plot():
+    # Copy data frame and prepare features for grouping
+    df_bar = df.copy()
+    df_bar['year'] = df_bar.index.year
+    df_bar['month'] = df_bar.index.strftime('%B') # Full month name string
+
+    # Group data by year and month, calculating the mean of values
+    df_grouped = df_bar.groupby(['year', 'month'])['value'].mean().unstack()
+    
+    # Define custom month order so they sort chronologically rather than alphabetically
+    months_order = [
+        'January', 'February', 'March', 'April', 'May', 'June', 
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    df_grouped = df_grouped.reindex(columns=months_order)
+
+    # Draw bar chart
+    fig = df_grouped.plot(kind='bar', figsize=(7, 7), xlabel='Years', ylabel='Average Page Views').get_figure()
+    plt.legend(title='Months')
+
+    # Save image and return fig (don't modify)
+    fig.savefig('bar_plot.png')
+    return fig
+
+# 5. Create a draw_box_plot function that uses Seaborn
+def draw_box_plot():
+    # Copy data frame and isolate date elements
+    df_box = df.copy()
+    df_box.reset_index(inplace=True)
+    df_box['year'] = [d.year for d in df_box.date]
+    df_box['month'] = [d.strftime('%b') for d in df_box.date] # Abbreviated month name (Jan, Feb, etc.)
+
+    # Set up matplotlib grid for two adjacent figures
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Draw Year-wise Box Plot (Trend)
+    sns.boxplot(x='year', y='value', data=df_box, ax=axes[0], palette='tab10')
+    axes[0].set_title('Year-wise Box Plot (Trend)')
+    axes[0].set_xlabel('Year')
+    axes[0].set_ylabel('Page Views')
+    
+    # Define abbreviated chronological month order for seasonality chart alignment
+    months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    # Draw Month-wise Box Plot (Seasonality)
+    sns.boxplot(x='month', y='value', data=df_box, ax=axes[1], order=months_short, palette='husl')
+    axes[1].set_title('Month-wise Box Plot (Seasonality)')
+    axes[1].set_xlabel('Month')
+    axes[1].set_ylabel('Page Views')
+
+    # Save image and return fig (don't modify)
+    fig.savefig('box_plot.png')
+    return fig
